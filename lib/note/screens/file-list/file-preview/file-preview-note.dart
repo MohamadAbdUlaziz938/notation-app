@@ -10,6 +10,7 @@ class NoteFilePreview extends StatelessWidget {
   final FileEntry fileEntry;
   @override
   Widget build(BuildContext context) {
+    print("");
     final name = context.select((NoteState noteState) =>
         noteState.entriesFile[fileEntry.documentId].name);
     return Scaffold(
