@@ -1,34 +1,44 @@
 
 import 'package:flutter/material.dart';
 import 'package:note/auth/screen/signin.dart';
+import 'package:note/messaging.dart';
 import 'package:note/note/dialogs/loading-dialog.dart';
 import 'package:note/note/screens/addnotes.dart';
+import 'package:note/note/screens/file-list/base_file_list_screen.dart';
 import 'package:note/note/screens/editnotes.dart';
-import 'package:note/note/screens/homepage.dart';
-import 'package:note/note/screens/viewnotes.dart';
+import 'package:note/note/screens/file-list/file-preview/file-preview-screen.dart';
+import 'package:note/note/screens/file-list/root_screen.dart';
+import 'package:note/note/screens/file-list/file-preview/file-preview-note.dart';
+import 'package:note/transfers/transfer-screen/transfer-screen.dart';
 import 'package:provider/provider.dart';
 
 import 'auth/screen/register.dart';
+import 'donwload_button_test.dart';
 MaterialPageRoute buildRoute(RouteSettings settings) {
+  print(settings.name);
   switch (settings.name) {
-
-    case ViewNote.ROUTE:
-      ViewNoteArgs args = settings.arguments;
-      return MaterialPageRoute(builder: (_) => loadingWillPopScope(ViewNote(notes: args.notes,)), settings: settings);
+    case FilePreviewScreen.ROUTE:
+      //ViewNoteArgs args = settings.arguments;
+      return MaterialPageRoute(builder: (_) => loadingWillPopScope(FilePreviewScreen()), settings: settings);
     case AddNotes.ROUTE:
       return MaterialPageRoute(builder: (_) => loadingWillPopScope(AddNotes()), settings: settings);
     case EditNotes.ROUTE:
       EditNotesArgs args = settings.arguments;
-      return MaterialPageRoute(builder: (_) => loadingWillPopScope(EditNotes(docid:args.docid,list:args.list)), settings: settings);
-    case EditNotes.ROUTE:
-      return MaterialPageRoute(builder: (_) => loadingWillPopScope(EditNotes()), settings: settings);
+      return MaterialPageRoute(builder: (_) => loadingWillPopScope(EditNotes(note:args.note)), settings: settings);
     case Login.ROUTE:
       return MaterialPageRoute(builder: (_) => loadingWillPopScope(Login()), settings: settings);
     case SignUp.ROUTE:
       return MaterialPageRoute(builder: (_) => loadingWillPopScope(SignUp()), settings: settings);
-    case HomePage.ROUTE:
-      return MaterialPageRoute(builder: (_) => loadingWillPopScope(HomePage()), settings: settings);
-
+    case RootScreen.ROUTE:
+      return MaterialPageRoute(builder: (_) => loadingWillPopScope(RootScreen()), settings: settings);
+    case messaging.ROUTE:
+      return MaterialPageRoute(builder: (_) => loadingWillPopScope(messaging()), settings: settings);
+    case DownLoadButton2.ROUTE:
+      return MaterialPageRoute(builder: (_) => loadingWillPopScope(DownLoadButton2()), settings: settings);
+    case TransfersScreen.ROUTE:
+      return MaterialPageRoute(builder: (_) => loadingWillPopScope(TransfersScreen()), settings: settings);
+    // case BaseFileListSceen.ROUTE:
+    //   return MaterialPageRoute(builder: (_) => loadingWillPopScope(BaseFileListSceen()), settings: settings);
 
 
   //   case FolderScreen.ROUTE:

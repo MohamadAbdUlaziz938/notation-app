@@ -2,23 +2,22 @@ import 'dart:io';
 import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:note/note/dialogs/loading-dialog.dart';
-
-
+import 'package:note/note/http/file-entry-api.dart';
+import 'package:note/note/state/note.dart';
+import 'package:note/note/state/note-state.dart';
 import 'package:path/path.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:provider/provider.dart';
 class EditNotesArgs{
-  final docid;
-  final list;
-  EditNotesArgs(this.docid, this.list);
+  final note;
+  EditNotesArgs( this.note);
 }
 class EditNotes extends StatefulWidget {
   static const ROUTE="editNote";
-  final docid;
-  final list;
-  EditNotes({Key key, this.docid, this.list}) : super(key: key);
-
+  final Note note;
+  EditNotes({Key key, this.note}) : super(key: key);
   @override
   _EditNotesState createState() => _EditNotesState();
 }
@@ -34,19 +33,20 @@ class _EditNotesState extends State<EditNotes> {
 
   GlobalKey<FormState> formstate = new GlobalKey<FormState>();
 
-  editNotes(context) async {
+  editNotes(BuildContext context) async {
+    final api=context.read<NoteState>().api;
     var formdata = formstate.currentState;
 
     if (file == null) {
       if (formdata.validate()) {
-        showLoading(context);
+      LoadingDialog.show();
         formdata.save();
-        await notesref.doc(widget.docid).update({
-          "title": title,
-          "note": note,
-        }).then((value) {
-          Navigator.of(context).pushNamed("/");
+        await api.editNote(widget.note.toJson(), "notes")
+          .then((value) {
+          LoadingDialog.hide();
+          Navigator.of(context).pushNamedAndRemoveUntil("home",(_)=>false);
         }).catchError((e) {
+          LoadingDialog.hide();
           print("$e");
         });
       }
@@ -55,16 +55,13 @@ class _EditNotesState extends State<EditNotes> {
         showLoading(context);
         formdata.save();
         await ref.putFile(file);
-        imageurl = await ref.getDownloadURL();
-        await notesref.doc(widget.docid).update({
-          "title": title,
-          "note": note,
-          "imageurl": imageurl,
-        }).then((value) {
-          Navigator.of(context).pushNamed("home");
-        }).catchError((e) {
-          print("$e");
-        });
+        widget.note.imageUrl = await ref.getDownloadURL();
+        await api.editNote(widget.note.toJson(), "notes")
+            .then((value) {
+            Navigator.of(context).pushNamedAndRemoveUntil("home",(_)=>false);
+          }).catchError((e) {
+            print("$e");
+          });
       }
     }
   }
@@ -82,7 +79,7 @@ class _EditNotesState extends State<EditNotes> {
               key: formstate,
               child: Column(children: [
                 TextFormField(
-                  initialValue: widget.list['title'],
+                  initialValue: widget.note.title,
                   validator: (val) {
                     if (val.length > 30) {
                       return "Title can't to be larger than 30 letter";
@@ -93,7 +90,7 @@ class _EditNotesState extends State<EditNotes> {
                     return null;
                   },
                   onSaved: (val) {
-                    title = val;
+                    widget.note.title = val;
                   },
                   maxLength: 30,
                   decoration: InputDecoration(
@@ -103,7 +100,7 @@ class _EditNotesState extends State<EditNotes> {
                       prefixIcon: Icon(Icons.note)),
                 ),
                 TextFormField(
-                  initialValue: widget.list['note'],
+                  initialValue: widget.note.note,
                   validator: (val) {
                     if (val.length > 255) {
                       return "Notes can't to be larger than 255 letter";
@@ -114,7 +111,7 @@ class _EditNotesState extends State<EditNotes> {
                     return null;
                   },
                   onSaved: (val) {
-                    note = val;
+                    widget.note.note = val;
                   },
                   minLines: 1,
                   maxLines: 3,

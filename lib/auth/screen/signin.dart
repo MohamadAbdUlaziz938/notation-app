@@ -1,45 +1,53 @@
-import 'package:awesome_dialog/awesome_dialog.dart';
-
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:note/note/dialogs/loading-dialog.dart';
+import 'package:flutter_form_builder/flutter_form_builder.dart';
+import 'package:note/note/dialogs/message-dialog.dart';
+import 'package:provider/provider.dart';
+
+import '../auth-state.dart';
 
 class Login extends StatefulWidget {
-  static const ROUTE="signin";
+  static const ROUTE = "signin";
   Login({Key key}) : super(key: key);
   @override
   _LoginState createState() => _LoginState();
 }
+
 class _LoginState extends State<Login> {
   var mypassword, myemail;
-  GlobalKey<FormState> formstate = new GlobalKey<FormState>();
-  signIn() async {
+  GlobalKey<FormBuilderState> formstate = new GlobalKey<FormBuilderState>();
+  signIn(BuildContext context) async {
     var formdata = formstate.currentState;
     if (formdata.validate()) {
       formdata.save();
       try {
-      //  showLoading(context);
         LoadingDialog.show();
-        UserCredential userCredential = await FirebaseAuth.instance
-            .signInWithEmailAndPassword(email: myemail.toString().trim(), password: mypassword.toString().trim());
+        await context
+            .read<AuthState>()
+            .logIn(Map.from(formstate.currentState.value));
         LoadingDialog.hide();
-        return userCredential;
-      } on FirebaseAuthException catch (e) {
+        if (context
+            .read<AuthState>().getUser != null) {
+          Navigator.of(context).pushNamedAndRemoveUntil("home", (_) => false);
+        }
+        //return userCredential;
+      } catch (e) {
         LoadingDialog.hide();
         if (e.code == 'user-not-found') {
-          Navigator.of(context).pop();
-          AwesomeDialog(
-              context: context,
-              title: "Error",
-              body: Text("No user found for that email"))
-            ..show();
+          print("not");
+          // Navigator.of(context).pop();
+          // AwesomeDialog(
+          //     context: context,
+          //     title: "Error",
+          //     body: Text("No user found for that email"))
+          //   ..show();
+          showMessageDialog(context, "No user found for that email");
         } else if (e.code == 'wrong-password') {
-          Navigator.of(context).pop();
-          AwesomeDialog(
-              context: context,
-              title: "Error",
-              body: Text("Wrong password provided for that user"))
-            ..show();
+          showMessageDialog(context, "Wrong password provided for that user");
+        }
+        else if (e.code == 'too-many-requests') {
+          showMessageDialog(context, "too-many-requests");
         }
       }
     } else {
@@ -51,19 +59,20 @@ class _LoginState extends State<Login> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: ListView(
-
-        //mainAxisAlignment: MainAxisAlignment.center,
         physics: BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
         children: [
-          SizedBox(height: 50,),
+          SizedBox(
+            height: 50,
+          ),
           Center(child: Image.asset("assets/images/logo.png")),
           Container(
             padding: EdgeInsets.all(20),
-            child: Form(
+            child: FormBuilder(
                 key: formstate,
                 child: Column(
                   children: [
-                    TextFormField(
+                    FormBuilderTextField(
+                      name: "email",
                       onSaved: (val) {
                         myemail = val;
                       },
@@ -77,13 +86,14 @@ class _LoginState extends State<Login> {
                         return null;
                       },
                       decoration: InputDecoration(
-                          prefixIcon: Icon(Icons.person),
-                          hintText: "Email",
+                          prefixIcon: Icon(Icons.person_outline),
+                          labelText: "Email",
                           border: OutlineInputBorder(
                               borderSide: BorderSide(width: 1))),
                     ),
                     SizedBox(height: 20),
-                    TextFormField(
+                    FormBuilderTextField(
+                      name: "password",
                       onSaved: (val) {
                         mypassword = val;
                       },
@@ -98,8 +108,9 @@ class _LoginState extends State<Login> {
                       },
                       obscureText: true,
                       decoration: InputDecoration(
-                          prefixIcon: Icon(Icons.person),
-                          hintText: "password",
+                          prefixIcon: Icon(Icons.lock_outline),
+                          //hintText: "password",
+                          labelText: "Password",
                           border: OutlineInputBorder(
                               borderSide: BorderSide(width: 1))),
                     ),
@@ -111,7 +122,7 @@ class _LoginState extends State<Login> {
                             InkWell(
                               onTap: () {
                                 Navigator.of(context)
-                                    .pushReplacementNamed("signup");
+                                    .pushReplacementNamed("register");
                               },
                               child: Text(
                                 "Click Here",
@@ -122,19 +133,15 @@ class _LoginState extends State<Login> {
                         )),
                     Container(
                         child: RaisedButton(
-                          textColor: Colors.white,
-                          onPressed: () async {
-                            var user = await signIn();
-                            if (user != null) {
-                              Navigator.of(context)
-                                  .pushNamedAndRemoveUntil("home",(_)=>false);
-                            }
-                          },
-                          child: Text(
-                            "Sign in",
-                            style: Theme.of(context).textTheme.headline6,
-                          ),
-                        ))
+                      textColor: Colors.white,
+                      onPressed: () async {
+                        await signIn(context);
+                      },
+                      child: Text(
+                        "Sign in",
+                        style: Theme.of(context).textTheme.headline6,
+                      ),
+                    ))
                   ],
                 )),
           )
@@ -143,23 +150,3 @@ class _LoginState extends State<Login> {
     );
   }
 }
-
-/*
-
-showLoading(context) {
-  return showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text("Please Wait"),
-          content: Container(
-              height: 50,
-              child: Center(
-                child: CircularProgressIndicator(),
-              )),
-        );
-      });
-}
-
-
-*/

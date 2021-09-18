@@ -1,13 +1,16 @@
-import 'package:awesome_dialog/awesome_dialog.dart';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:note/note/dialogs/loading-dialog.dart';
-
+import 'package:note/note/dialogs/message-dialog.dart';
+import 'package:provider/provider.dart';
+import '../auth-state.dart';
 
 class SignUp extends StatefulWidget {
-  static const ROUTE="register";
+  static const ROUTE = "register";
   SignUp({Key key}) : super(key: key);
 
   @override
@@ -16,35 +19,37 @@ class SignUp extends StatefulWidget {
 
 class _SignUpState extends State<SignUp> {
   var myusername, mypassword, myemail;
-  GlobalKey<FormState> formstate = new GlobalKey<FormState>();
+  GlobalKey<FormBuilderState> formstate = new GlobalKey<FormBuilderState>();
 
-  signUp() async {
+  signUp(BuildContext context) async {
     var formdata = formstate.currentState;
     if (formdata.validate()) {
       ///to store values in variables
       formdata.save();
 
       try {
-        showLoading(context);
-        UserCredential userCredential = await FirebaseAuth.instance
-            .createUserWithEmailAndPassword(
-            email: myemail, password: mypassword);
-        return userCredential;
+        LoadingDialog.show();
+        UserCredential userCredential = await context
+            .read<AuthState>()
+            .register(Map.from(formstate.currentState.value));
+        if (context.read<AuthState>().getUser != null) {
+
+          Navigator.of(context).pushNamedAndRemoveUntil("home", (_) => false);
+        }
+        LoadingDialog.hide();
       } on FirebaseAuthException catch (e) {
+        LoadingDialog.hide();
         if (e.code == 'weak-password') {
-          Navigator.of(context).pop();
-          AwesomeDialog(
-              context: context,
-              title: "Error",
-              body: Text("Password is to weak"))
-            ..show();
+          showMessageDialog(context, "Password is too weak");
         } else if (e.code == 'email-already-in-use') {
-          Navigator.of(context).pop();
-          AwesomeDialog(
-              context: context,
-              title: "Error",
-              body: Text("The account already exists for that email"))
-            ..show();
+          //Navigator.of(context).pop();
+          // AwesomeDialog(
+          //     context: context,
+          //     title: "Error",
+          //     body: Text("The account already exists for that email"))
+          //   ..show();
+          showMessageDialog(
+              context, "The account already exists for that email");
         }
       } catch (e) {
         print(e);
@@ -61,11 +66,12 @@ class _SignUpState extends State<SignUp> {
           Center(child: Image.asset("assets/images/logo.png")),
           Container(
             padding: EdgeInsets.all(20),
-            child: Form(
+            child: FormBuilder(
                 key: formstate,
                 child: Column(
                   children: [
-                    TextFormField(
+                    FormBuilderTextField(
+                      name: "username",
                       onSaved: (val) {
                         myusername = val;
                       },
@@ -85,7 +91,8 @@ class _SignUpState extends State<SignUp> {
                               borderSide: BorderSide(width: 1))),
                     ),
                     SizedBox(height: 20),
-                    TextFormField(
+                    FormBuilderTextField(
+                      name: "email",
                       onSaved: (val) {
                         myemail = val;
                       },
@@ -100,12 +107,14 @@ class _SignUpState extends State<SignUp> {
                       },
                       decoration: InputDecoration(
                           prefixIcon: Icon(Icons.email_outlined),
-                          hintText: "email",
+                         // hintText: "email",
+                          labelText: "Password",
                           border: OutlineInputBorder(
                               borderSide: BorderSide(width: 1))),
                     ),
                     SizedBox(height: 20),
-                    TextFormField(
+                    FormBuilderTextField(
+                      name: "password",
                       onSaved: (val) {
                         mypassword = val;
                       },
@@ -121,7 +130,8 @@ class _SignUpState extends State<SignUp> {
                       obscureText: true,
                       decoration: InputDecoration(
                           prefixIcon: Icon(Icons.lock_open_outlined),
-                          hintText: "password",
+                          //hintText: "password",
+                          labelText: "Password",
                           border: OutlineInputBorder(
                               borderSide: BorderSide(width: 1))),
                     ),
@@ -132,7 +142,8 @@ class _SignUpState extends State<SignUp> {
                             Text("if you have Account "),
                             InkWell(
                               onTap: () {
-                                Navigator.of(context).pushReplacementNamed("login");
+                                Navigator.of(context)
+                                    .pushReplacementNamed("signin");
                               },
                               child: Text(
                                 "Click Here",
@@ -143,26 +154,26 @@ class _SignUpState extends State<SignUp> {
                         )),
                     Container(
                         child: RaisedButton(
-                          textColor: Colors.white,
-                          onPressed: () async {
-                            UserCredential response = await signUp();
-                            print("===================");
-                            if (response != null) {
-                              await FirebaseFirestore.instance
-                                  .collection("users")
-                                  .add({"username": myusername, "email": myemail});
-                              Navigator.of(context)
-                                  .pushNamedAndRemoveUntil("home",(_)=>false);
-                            } else {
-                              print("Sign Up Faild");
-                            }
-                            print("===================");
-                          },
-                          child: Text(
-                            "Sign Up",
-                            style: Theme.of(context).textTheme.headline6,
-                          ),
-                        ))
+                      textColor: Colors.white,
+                      onPressed: () async {
+                        await signUp(context);
+                        //print("===================");
+                        // if (response != null) {
+                        //   await FirebaseFirestore.instance
+                        //       .collection("users")
+                        //       .add({"username": myusername, "email": myemail});
+                        //   Navigator.of(context)
+                        //       .pushNamedAndRemoveUntil("home",(_)=>false);
+                        // } else {
+                        //   print("Sign Up Faild");
+                        // }
+                        // print("===================");
+                      },
+                      child: Text(
+                        "Sign Up",
+                        style: Theme.of(context).textTheme.headline6,
+                      ),
+                    ))
                   ],
                 )),
           )

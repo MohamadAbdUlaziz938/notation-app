@@ -1,21 +1,21 @@
 import 'dart:io';
 import 'dart:math';
-import 'package:awesome_dialog/awesome_dialog.dart';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
-
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:note/note/dialogs/loading-dialog.dart';
-
+import 'package:note/note/state/Note.dart';
+import 'package:note/note/state/note-state.dart';
 import 'package:path/path.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:provider/provider.dart';
+
 
 class AddNotes extends StatefulWidget {
-  static const ROUTE="addNote";
+  static const ROUTE = "addNote";
   AddNotes({Key key}) : super(key: key);
-
   @override
   _AddNotesState createState() => _AddNotesState();
 }
@@ -27,33 +27,36 @@ class _AddNotesState extends State<AddNotes> {
 
   File file;
 
-  var title, note, imageurl;
+  var title, note_, imageurl;
+  Note note;
+ final Map<String,dynamic> map=new Map();
 
   GlobalKey<FormState> formstate = new GlobalKey<FormState>();
 
-  addNotes(context) async {
-    if (file == null)
-      return AwesomeDialog(
-          context: context,
-          title: "هام",
-          body: Text("please choose Image"),
-          dialogType: DialogType.ERROR)
-        ..show();
+  addNotes(BuildContext context) async {
+    final api=context.read<NoteState>().api;
+    if (file == null){}
+      // return AwesomeDialog(
+      //     context: context,
+      //     title: "هام",
+      //     body: Text("please choose Image"),
+      //     dialogType: DialogType.ERROR)
+      //   ..show();
     var formdata = formstate.currentState;
     if (formdata.validate()) {
       //showLoading(context);
       LoadingDialog.show();
       formdata.save();
       await ref.putFile(file);
+      
       imageurl = await ref.getDownloadURL();
-      await notesref.add({
-        "title": title,
-        "note": note,
-        "imageurl": imageurl,
-        "userid": FirebaseAuth.instance.currentUser.uid
-      }).then((value) {
+      map.addAll({"imageurl":imageurl});
+      map.addAll({"userid": FirebaseAuth.instance.currentUser.uid});
+      await api.addNote(
+        map
+      , "notes").then((value) {
         LoadingDialog.hide();
-        Navigator.of(context).pushReplacementNamed("home");
+        Navigator.of(context).pushNamedAndRemoveUntil("home", (_) => false);
       }).catchError((e) {
         LoadingDialog.hide();
         print("$e");
@@ -84,7 +87,8 @@ class _AddNotesState extends State<AddNotes> {
                     return null;
                   },
                   onSaved: (val) {
-                    title = val;
+                    //title = val;
+                    map.addAll({"title":val});
                   },
                   maxLength: 30,
                   decoration: InputDecoration(
@@ -104,7 +108,8 @@ class _AddNotesState extends State<AddNotes> {
                     return null;
                   },
                   onSaved: (val) {
-                    note = val;
+                    //note = val;
+                    map.addAll({"note":val});
                   },
                   minLines: 1,
                   maxLines: 3,
@@ -117,6 +122,7 @@ class _AddNotesState extends State<AddNotes> {
                 ),
                 RaisedButton(
                   onPressed: () {
+
                     showBottomSheet(context);
                   },
                   textColor: Colors.white,
@@ -164,7 +170,6 @@ class _AddNotesState extends State<AddNotes> {
                       ref = FirebaseStorage.instance
                           .ref("images")
                           .child("$imagename");
-
                       Navigator.of(context).pop();
                     }
                   },
